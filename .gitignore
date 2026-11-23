@@ -1,6 +1,14 @@
-﻿bin/
+# Compilación de .NET
+bin/
 obj/
+
+# Visual Studio / VS Code
 .vs/
 .vscode/
 *.user
 *.suo
+
+# Archivos del sistema
+desktop.ini
+Thumbs.db
+.DS_Store

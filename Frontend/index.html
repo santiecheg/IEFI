@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verdulería · Gestión de ventas</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- ===================== ENCABEZADO Y NAVEGACIÓN ===================== -->
+    <header class="header">
+        <div class="header__inner">
+            <div class="brand">
+                <span class="brand__logo" aria-hidden="true"></span>
+                <div>
+                    <h1 class="brand__title">Verdulería</h1>
+                    <p class="brand__subtitle">Gestión de productos, cajeros y ventas</p>
+                </div>
+            </div>
+
+            <div class="api-status" id="api-status" title="Estado de la conexión con la API">
+                <span class="api-status__dot"></span>
+                <span id="api-status-texto">Conectando…</span>
+            </div>
+        </div>
+
+        <nav class="tabs" id="tabs" aria-label="Secciones">
+            <button class="tab is-active" data-seccion="resumen">Resumen</button>
+            <button class="tab" data-seccion="ventas">Ventas</button>
+            <button class="tab" data-seccion="productos">Productos</button>
+            <button class="tab" data-seccion="cajeros">Cajeros</button>
+        </nav>
+    </header>
+
+    <main class="container">
+
+        <!-- ============================ RESUMEN ============================ -->
+        <section id="seccion-resumen" class="section is-visible">
+            <div class="section__head">
+                <h2>Resumen</h2>
+                <button type="button" class="btn btn--ghost" id="btn-actualizar-resumen">Actualizar</button>
+            </div>
+
+            <div class="stats">
+                <article class="stat">
+                    <p class="stat__label">Recaudado hoy</p>
+                    <p class="stat__value" id="stat-hoy-total">—</p>
+                    <p class="stat__hint" id="stat-hoy-cantidad">&nbsp;</p>
+                </article>
+                <article class="stat">
+                    <p class="stat__label">Recaudado esta semana</p>
+                    <p class="stat__value" id="stat-semana-total">—</p>
+                    <p class="stat__hint" id="stat-semana-cantidad">&nbsp;</p>
+                </article>
+                <article class="stat">
+                    <p class="stat__label">Productos con poco stock</p>
+                    <p class="stat__value" id="stat-stock-bajo">—</p>
+                    <p class="stat__hint" id="stat-stock-bajo-hint">&nbsp;</p>
+                </article>
+                <article class="stat">
+                    <p class="stat__label">Cajeros activos</p>
+                    <p class="stat__value" id="stat-cajeros">—</p>
+                    <p class="stat__hint" id="stat-cajeros-hint">&nbsp;</p>
+                </article>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card__head">
+                        <h3>Últimas ventas</h3>
+                        <label class="inline-field">
+                            Mostrar
+                            <select id="select-ultimas">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Cajero</th>
+                                    <th class="num">Kg</th>
+                                    <th class="num">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-ultimas"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__head">
+                        <h3>Stock bajo</h3>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="num">Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-stock-bajo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================= VENTAS ============================= -->
+        <section id="seccion-ventas" class="section">
+            <div class="section__head">
+                <h2>Ventas</h2>
+            </div>
+
+            <div class="layout">
+                <form id="form-venta" class="card form" novalidate>
+                    <h3 id="form-venta-titulo">Registrar venta</h3>
+                    <input type="hidden" id="venta-id">
+
+                    <div class="field">
+                        <label for="venta-cajero">Cajero</label>
+                        <select id="venta-cajero"></select>
+                        <p class="field__error" data-error-de="venta-cajero"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="venta-producto">Producto</label>
+                        <select id="venta-producto"></select>
+                        <p class="field__error" data-error-de="venta-producto"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="venta-cantidad">Cantidad (kg)</label>
+                        <input type="number" id="venta-cantidad" step="0.01" min="0.01" placeholder="Ej: 1.5">
+                        <p class="field__error" data-error-de="venta-cantidad"></p>
+                    </div>
+
+                    <div class="preview">
+                        <div class="preview__row">
+                            <span>Precio por kg</span>
+                            <strong id="preview-precio">—</strong>
+                        </div>
+                        <div class="preview__row">
+                            <span>Stock disponible</span>
+                            <strong id="preview-stock">—</strong>
+                        </div>
+                        <div class="preview__row">
+                            <span>Stock después de la venta</span>
+                            <strong id="preview-restante">—</strong>
+                        </div>
+                        <div class="preview__row preview__total">
+                            <span>Total</span>
+                            <strong id="preview-total">$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <div class="form__actions">
+                        <button type="submit" class="btn btn--primary" id="btn-guardar-venta">Registrar venta</button>
+                        <button type="button" class="btn btn--ghost" id="btn-cancelar-venta" hidden>Cancelar</button>
+                    </div>
+                </form>
+
+                <div class="card">
+                    <div class="card__head">
+                        <h3>Listado de ventas</h3>
+                        <div class="segmented" id="filtro-ventas" role="group" aria-label="Filtrar ventas">
+                            <button type="button" data-filtro="todas" class="is-active">Todas</button>
+                            <button type="button" data-filtro="hoy">Hoy</button>
+                            <button type="button" data-filtro="semana">Semana</button>
+                        </div>
+                    </div>
+                    <p class="card__summary" id="ventas-resumen">&nbsp;</p>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Cajero</th>
+                                    <th class="num">Kg</th>
+                                    <th class="num">Total</th>
+                                    <th class="acciones">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-ventas"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================ PRODUCTOS ============================ -->
+        <section id="seccion-productos" class="section">
+            <div class="section__head">
+                <h2>Productos</h2>
+            </div>
+
+            <div class="layout">
+                <form id="form-producto" class="card form" novalidate>
+                    <h3 id="form-producto-titulo">Nuevo producto</h3>
+                    <input type="hidden" id="producto-id">
+
+                    <div class="field">
+                        <label for="producto-nombre">Nombre</label>
+                        <input type="text" id="producto-nombre" maxlength="60" placeholder="Ej: Zanahoria">
+                        <p class="field__error" data-error-de="producto-nombre"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="producto-precio">Precio por kg ($)</label>
+                        <input type="number" id="producto-precio" step="0.01" min="0.01" placeholder="Ej: 1500">
+                        <p class="field__error" data-error-de="producto-precio"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="producto-stock">Stock (kg)</label>
+                        <input type="number" id="producto-stock" step="0.01" min="0" placeholder="Ej: 20">
+                        <p class="field__error" data-error-de="producto-stock"></p>
+                    </div>
+
+                    <div class="form__actions">
+                        <button type="submit" class="btn btn--primary" id="btn-guardar-producto">Guardar producto</button>
+                        <button type="button" class="btn btn--ghost" id="btn-cancelar-producto" hidden>Cancelar</button>
+                    </div>
+                </form>
+
+                <div class="card">
+                    <div class="card__head">
+                        <h3>Listado de productos</h3>
+                        <input type="search" id="buscar-producto" class="search" placeholder="Buscar producto…">
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th class="num">Precio por kg</th>
+                                    <th class="num">Stock</th>
+                                    <th class="acciones">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-productos"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================= CAJEROS ============================= -->
+        <section id="seccion-cajeros" class="section">
+            <div class="section__head">
+                <h2>Cajeros</h2>
+            </div>
+
+            <div class="layout">
+                <form id="form-cajero" class="card form" novalidate>
+                    <h3 id="form-cajero-titulo">Nuevo cajero</h3>
+                    <input type="hidden" id="cajero-id">
+
+                    <div class="field">
+                        <label for="cajero-nombre">Nombre y apellido</label>
+                        <input type="text" id="cajero-nombre" maxlength="80" placeholder="Ej: Ana López">
+                        <p class="field__error" data-error-de="cajero-nombre"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="cajero-legajo">Legajo</label>
+                        <input type="text" id="cajero-legajo" maxlength="20" placeholder="Ej: CAJ-03" class="uppercase">
+                        <p class="field__error" data-error-de="cajero-legajo"></p>
+                    </div>
+
+                    <label class="check">
+                        <input type="checkbox" id="cajero-activo" checked>
+                        <span>Activo (puede registrar ventas)</span>
+                    </label>
+
+                    <div class="form__actions">
+                        <button type="submit" class="btn btn--primary" id="btn-guardar-cajero">Guardar cajero</button>
+                        <button type="button" class="btn btn--ghost" id="btn-cancelar-cajero" hidden>Cancelar</button>
+                    </div>
+                </form>
+
+                <div class="card">
+                    <div class="card__head">
+                        <h3>Listado de cajeros</h3>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Legajo</th>
+                                    <th>Estado</th>
+                                    <th class="acciones">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-cajeros"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mensajes flotantes (éxito / error) -->
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Scripts: el orden importa, cada archivo usa funciones de los anteriores -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/productos.js"></script>
+    <script src="js/cajeros.js"></script>
+    <script src="js/ventas.js"></script>
+    <script src="js/resumen.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
