@@ -1,29 +1,25 @@
-using Microsoft.EntityFrameworkCore;
-using Verduleria.Data;
+using Verduleria.Data.Repositories;
 using Verduleria.Entities;
 
 namespace Verduleria.Business;
 
 public class CajeroService
 {
-    private readonly VerduleriaDbContext _context;
+    private readonly CajeroRepository _cajeroRepository;
 
-    public CajeroService(VerduleriaDbContext context)
+    public CajeroService(CajeroRepository cajeroRepository)
     {
-        _context = context;
+        _cajeroRepository = cajeroRepository;
     }
 
     public async Task<List<Cajero>> ObtenerTodosAsync()
     {
-        return await _context.Cajeros
-            .OrderBy(c => c.Nombre)
-            .ToListAsync();
+        return await _cajeroRepository.ObtenerTodosAsync();
     }
 
     public async Task<Cajero?> ObtenerPorIdAsync(int id)
     {
-        return await _context.Cajeros
-            .FirstOrDefaultAsync(c => c.Id == id);
+        return await _cajeroRepository.ObtenerPorIdAsync(id);
     }
 
     public async Task<(bool Ok, string Error, Cajero? Cajero)> CrearAsync(Cajero cajero)
@@ -36,8 +32,7 @@ public class CajeroService
 
         string legajoNormalizado = cajero.Legajo.Trim().ToUpper();
 
-        bool existeLegajo = await _context.Cajeros
-            .AnyAsync(c => c.Legajo.ToUpper() == legajoNormalizado);
+        bool existeLegajo = await _cajeroRepository.ExisteLegajoAsync(legajoNormalizado);
 
         if (existeLegajo)
             return (false, "Ya existe un cajero con ese legajo.", null);
@@ -46,15 +41,14 @@ public class CajeroService
         cajero.Nombre = cajero.Nombre.Trim();
         cajero.Legajo = legajoNormalizado;
 
-        _context.Cajeros.Add(cajero);
-        await _context.SaveChangesAsync();
+        var creado = await _cajeroRepository.AgregarAsync(cajero);
 
-        return (true, string.Empty, cajero);
+        return (true, string.Empty, creado);
     }
 
     public async Task<(bool Ok, string Error)> ActualizarAsync(int id, Cajero cajeroActualizado)
     {
-        var cajeroDb = await _context.Cajeros.FindAsync(id);
+        var cajeroDb = await _cajeroRepository.ObtenerPorIdAsync(id);
         if (cajeroDb is null)
             return (false, "Cajero no encontrado.");
 
@@ -66,8 +60,7 @@ public class CajeroService
 
         string legajoNormalizado = cajeroActualizado.Legajo.Trim().ToUpper();
 
-        bool legajoDuplicado = await _context.Cajeros
-            .AnyAsync(c => c.Id != id && c.Legajo.ToUpper() == legajoNormalizado);
+        bool legajoDuplicado = await _cajeroRepository.ExisteLegajoAsync(legajoNormalizado, excluirId: id);
 
         if (legajoDuplicado)
             return (false, "Ya existe otro cajero con ese legajo.");
@@ -76,24 +69,21 @@ public class CajeroService
         cajeroDb.Legajo = legajoNormalizado;
         cajeroDb.Activo = cajeroActualizado.Activo;
 
-        await _context.SaveChangesAsync();
+        await _cajeroRepository.ActualizarAsync(cajeroDb);
         return (true, string.Empty);
     }
 
     public async Task<(bool Ok, string Error)> EliminarAsync(int id)
     {
-        var cajeroDb = await _context.Cajeros
-            .Include(c => c.Ventas)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
+        var cajeroDb = await _cajeroRepository.ObtenerPorIdAsync(id);
         if (cajeroDb is null)
             return (false, "Cajero no encontrado.");
 
-        if (cajeroDb.Ventas.Any())
+        bool tieneVentas = await _cajeroRepository.TieneVentasAsync(id);
+        if (tieneVentas)
             return (false, "No se puede eliminar un cajero que tiene ventas registradas.");
 
-        _context.Cajeros.Remove(cajeroDb);
-        await _context.SaveChangesAsync();
+        await _cajeroRepository.EliminarAsync(cajeroDb);
 
         return (true, string.Empty);
     }

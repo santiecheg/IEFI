@@ -1,33 +1,32 @@
-using Microsoft.EntityFrameworkCore;
-using Verduleria.Data;
+using Verduleria.Data.Repositories;
 using Verduleria.Entities;
 
 namespace Verduleria.Business;
 
 public class VentaService
 {
-    private readonly VerduleriaDbContext _context;
+    private readonly VentaRepository _ventaRepository;
+    private readonly ProductoRepository _productoRepository;
+    private readonly CajeroRepository _cajeroRepository;
 
-    public VentaService(VerduleriaDbContext context)
+    public VentaService(
+        VentaRepository ventaRepository,
+        ProductoRepository productoRepository,
+        CajeroRepository cajeroRepository)
     {
-        _context = context;
+        _ventaRepository = ventaRepository;
+        _productoRepository = productoRepository;
+        _cajeroRepository = cajeroRepository;
     }
 
     public async Task<List<Venta>> ObtenerTodasAsync()
     {
-        return await _context.Ventas
-            .Include(v => v.Cajero)
-            .Include(v => v.Producto)
-            .OrderByDescending(v => v.Fecha)
-            .ToListAsync();
+        return await _ventaRepository.ObtenerTodasConDetalleAsync();
     }
 
     public async Task<Venta?> ObtenerPorIdAsync(int id)
     {
-        return await _context.Ventas
-            .Include(v => v.Cajero)
-            .Include(v => v.Producto)
-            .FirstOrDefaultAsync(v => v.Id == id);
+        return await _ventaRepository.ObtenerPorIdConDetalleAsync(id);
     }
 
     public async Task<(bool Ok, string Error, Venta? Venta)> RegistrarVentaAsync(int cajeroId, int productoId, decimal cantidadKg)
@@ -35,21 +34,21 @@ public class VentaService
         if (cantidadKg <= 0)
             return (false, "La cantidad en kg debe ser mayor a 0.", null);
 
-        var cajero = await _context.Cajeros.FindAsync(cajeroId);
+        var cajero = await _cajeroRepository.ObtenerPorIdAsync(cajeroId);
         if (cajero is null)
             return (false, "El cajero seleccionado no existe.", null);
 
         if (!cajero.Activo)
             return (false, "El cajero seleccionado no está activo.", null);
 
-        var producto = await _context.Productos.FindAsync(productoId);
+        var producto = await _productoRepository.ObtenerPorIdAsync(productoId);
         if (producto is null)
             return (false, "El producto seleccionado no existe.", null);
 
         if (producto.StockKg < cantidadKg)
             return (false, $"Stock insuficiente para {producto.Nombre}. Disponible: {producto.StockKg} kg.", null);
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _ventaRepository.BeginTransactionAsync();
 
         producto.StockKg -= cantidadKg;
 
@@ -62,8 +61,8 @@ public class VentaService
             Fecha = DateTime.Now
         };
 
-        _context.Ventas.Add(venta);
-        await _context.SaveChangesAsync();
+        await _ventaRepository.AgregarSinGuardarAsync(venta);
+        await _ventaRepository.GuardarCambiosAsync();
         await transaction.CommitAsync();
 
         venta.Cajero = cajero;
@@ -77,16 +76,14 @@ public class VentaService
         if (nuevaCantidadKg <= 0)
             return (false, "La cantidad en kg debe ser mayor a 0.");
 
-        var cajero = await _context.Cajeros.FindAsync(nuevoCajeroId);
+        var cajero = await _cajeroRepository.ObtenerPorIdAsync(nuevoCajeroId);
         if (cajero is null)
             return (false, "El cajero seleccionado no existe.");
 
         if (!cajero.Activo)
             return (false, "El cajero seleccionado no está activo.");
 
-        var venta = await _context.Ventas
-            .Include(v => v.Producto)
-            .FirstOrDefaultAsync(v => v.Id == id);
+        var venta = await _ventaRepository.ObtenerPorIdConProductoTrackedAsync(id);
 
         if (venta is null || venta.Producto is null)
             return (false, "Venta no encontrada.");
@@ -96,14 +93,14 @@ public class VentaService
         if (stockDisponible < nuevaCantidadKg)
             return (false, $"Stock insuficiente para {venta.Producto.Nombre}. Disponible: {stockDisponible} kg.");
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _ventaRepository.BeginTransactionAsync();
 
         venta.Producto.StockKg = stockDisponible - nuevaCantidadKg;
         venta.CajeroId = nuevoCajeroId;
         venta.CantidadKg = nuevaCantidadKg;
         venta.Total = Math.Round(nuevaCantidadKg * venta.Producto.PrecioPorKg, 2);
 
-        await _context.SaveChangesAsync();
+        await _ventaRepository.GuardarCambiosAsync();
         await transaction.CommitAsync();
 
         return (true, string.Empty);
@@ -111,20 +108,18 @@ public class VentaService
 
     public async Task<(bool Ok, string Error)> EliminarAsync(int id)
     {
-        var venta = await _context.Ventas
-            .Include(v => v.Producto)
-            .FirstOrDefaultAsync(v => v.Id == id);
+        var venta = await _ventaRepository.ObtenerPorIdConProductoTrackedAsync(id);
 
         if (venta is null)
             return (false, "Venta no encontrada.");
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _ventaRepository.BeginTransactionAsync();
 
         if (venta.Producto is not null)
             venta.Producto.StockKg += venta.CantidadKg;
 
-        _context.Ventas.Remove(venta);
-        await _context.SaveChangesAsync();
+        _ventaRepository.EliminarSinGuardar(venta);
+        await _ventaRepository.GuardarCambiosAsync();
         await transaction.CommitAsync();
 
         return (true, string.Empty);
@@ -136,12 +131,7 @@ public class VentaService
         if (cantidad <= 0)
             cantidad = 10;
 
-        return await _context.Ventas
-            .Include(v => v.Cajero)
-            .Include(v => v.Producto)
-            .OrderByDescending(v => v.Fecha)
-            .Take(cantidad)
-            .ToListAsync();
+        return await _ventaRepository.ObtenerUltimasConDetalleAsync(cantidad);
     }
 
     // 2. Ventas realizadas hoy + total recaudado del día
@@ -150,12 +140,7 @@ public class VentaService
         var hoy = DateTime.Today;
         var manana = hoy.AddDays(1);
 
-        var ventasHoy = await _context.Ventas
-            .Include(v => v.Cajero)
-            .Include(v => v.Producto)
-            .Where(v => v.Fecha >= hoy && v.Fecha < manana)
-            .OrderByDescending(v => v.Fecha)
-            .ToListAsync();
+        var ventasHoy = await _ventaRepository.ObtenerRangoFechasConDetalleAsync(hoy, manana);
 
         decimal totalRecaudado = ventasHoy.Sum(v => v.Total);
 
@@ -171,12 +156,7 @@ public class VentaService
         var inicioSemana = hoy.AddDays(-diasDesdeLunes);
         var finSemana = inicioSemana.AddDays(7);
 
-        var ventasSemana = await _context.Ventas
-            .Include(v => v.Cajero)
-            .Include(v => v.Producto)
-            .Where(v => v.Fecha >= inicioSemana && v.Fecha < finSemana)
-            .OrderByDescending(v => v.Fecha)
-            .ToListAsync();
+        var ventasSemana = await _ventaRepository.ObtenerRangoFechasConDetalleAsync(inicioSemana, finSemana);
 
         decimal totalRecaudado = ventasSemana.Sum(v => v.Total);
 

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Verduleria.Business;
 using Verduleria.Data;
+using Verduleria.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<VerduleriaDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Repositorios de la capa Data
+builder.Services.AddScoped<ProductoRepository>();
+builder.Services.AddScoped<CajeroRepository>();
+builder.Services.AddScoped<VentaRepository>();
 
 // Servicios de la capa Business
 builder.Services.AddScoped<ProductoService>();
