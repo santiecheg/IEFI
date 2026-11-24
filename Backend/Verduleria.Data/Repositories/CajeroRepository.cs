@@ -15,9 +15,10 @@ public class CajeroRepository
     public async Task<List<Cajero>> ObtenerTodosAsync() =>
         await _context.Cajeros.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
 
-    public async Task<Cajero?> ObtenerPorIdAsync(int id) =>
-        await _context.Cajeros.FindAsync(id);
-
+    public async Task<Cajero?> ObtenerPorIdAsync(int id)
+    {
+        return await _context.Cajeros.FindAsync(id);
+    }
     public async Task<bool> ExisteLegajoAsync(string legajo, int? excluirId = null) =>
         await _context.Cajeros.AnyAsync(c =>
             c.Legajo.ToLower() == legajo.ToLower() &&
