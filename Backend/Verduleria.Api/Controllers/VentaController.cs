@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Verduleria.Business;
-using Verduleria.Entities;
+using Verduleria.Business.DTOs;
 
 namespace Verduleria.Api.Controllers;
 
@@ -15,96 +15,130 @@ public class VentaController : ControllerBase
         _ventaService = ventaService;
     }
 
-    public record CrearVentaRequest(int CajeroId, int ProductoId, decimal CantidadKg);
-    public record ActualizarVentaRequest(int CajeroId, decimal CantidadKg);
-
     [HttpGet]
-    public async Task<ActionResult<List<Venta>>> GetAll()
+    public async Task<ActionResult<List<VentaResponseDto>>> GetAll()
     {
-        var ventas = await _ventaService.ObtenerTodasAsync();
-        return Ok(ventas);
+        try
+        {
+            var ventas = await _ventaService.ObtenerTodasAsync();
+            return Ok(ventas);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al obtener las ventas." });
+        }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Venta>> GetById(int id)
+    public async Task<ActionResult<VentaResponseDto>> GetById(int id)
     {
-        var venta = await _ventaService.ObtenerPorIdAsync(id);
-        if (venta is null)
-            return NotFound(new { mensaje = "Venta no encontrada." });
+        try
+        {
+            var venta = await _ventaService.ObtenerPorIdAsync(id);
+            if (venta is null)
+                return NotFound(new { mensaje = "Venta no encontrada." });
 
-        return Ok(venta);
+            return Ok(venta);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al buscar la venta." });
+        }
     }
 
     // Resumen: últimas N ventas (por defecto 10) -> GET api/venta/ultimas?cantidad=10
     [HttpGet("ultimas")]
-    public async Task<ActionResult<List<Venta>>> GetUltimas([FromQuery] int cantidad = 10)
+    public async Task<ActionResult<List<VentaResponseDto>>> GetUltimas([FromQuery] int cantidad = 10)
     {
-        var ventas = await _ventaService.ObtenerUltimasVentasAsync(cantidad);
-        return Ok(ventas);
+        try
+        {
+            var ventas = await _ventaService.ObtenerUltimasVentasAsync(cantidad);
+            return Ok(ventas);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al obtener las últimas ventas." });
+        }
     }
 
     // Resumen: ventas de hoy + total recaudado -> GET api/venta/hoy
     [HttpGet("hoy")]
-    public async Task<IActionResult> GetHoy()
+    public async Task<ActionResult<ResumenVentasResponseDto>> GetHoy()
     {
-        var (ventas, totalRecaudado) = await _ventaService.ObtenerVentasHoyAsync();
-        return Ok(new
+        try
         {
-            fecha = DateTime.Today,
-            cantidadVentas = ventas.Count,
-            totalRecaudado,
-            ventas
-        });
+            var resumen = await _ventaService.ObtenerVentasHoyAsync();
+            return Ok(resumen);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al obtener las ventas de hoy." });
+        }
     }
 
     // Resumen: ventas de la semana actual + total recaudado -> GET api/venta/semana
     [HttpGet("semana")]
-    public async Task<IActionResult> GetSemana()
+    public async Task<ActionResult<ResumenVentasResponseDto>> GetSemana()
     {
-        var (ventas, totalRecaudado) = await _ventaService.ObtenerVentasSemanaAsync();
-        return Ok(new
+        try
         {
-            cantidadVentas = ventas.Count,
-            totalRecaudado,
-            ventas
-        });
+            var resumen = await _ventaService.ObtenerVentasSemanaAsync();
+            return Ok(resumen);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al obtener las ventas de la semana." });
+        }
     }
 
     [HttpPost]
-    public async Task<ActionResult<Venta>> Create([FromBody] CrearVentaRequest request)
+    public async Task<ActionResult<VentaResponseDto>> Create([FromBody] CrearVentaRequestDto request)
     {
-        var resultado = await _ventaService.RegistrarVentaAsync(
-            request.CajeroId,
-            request.ProductoId,
-            request.CantidadKg);
+        try
+        {
+            var resultado = await _ventaService.RegistrarVentaAsync(request);
+            if (!resultado.Ok)
+                return BadRequest(new { mensaje = resultado.Error });
 
-        if (!resultado.Ok)
-            return BadRequest(new { mensaje = resultado.Error });
-
-        return CreatedAtAction(nameof(GetById), new { id = resultado.Venta!.Id }, resultado.Venta);
+            return CreatedAtAction(nameof(GetById), new { id = resultado.Venta!.Id }, resultado.Venta);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al registrar la venta." });
+        }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] ActualizarVentaRequest request)
+    public async Task<IActionResult> Update(int id, [FromBody] ActualizarVentaRequestDto request)
     {
-        var resultado = await _ventaService.ActualizarCantidadAsync(
-            id,
-            request.CajeroId,
-            request.CantidadKg);
+        try
+        {
+            var resultado = await _ventaService.ActualizarCantidadAsync(id, request);
+            if (!resultado.Ok)
+                return BadRequest(new { mensaje = resultado.Error });
 
-        if (!resultado.Ok)
-            return BadRequest(new { mensaje = resultado.Error });
-
-        return NoContent();
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al actualizar la venta." });
+        }
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var resultado = await _ventaService.EliminarAsync(id);
-        if (!resultado.Ok)
-            return BadRequest(new { mensaje = resultado.Error });
+        try
+        {
+            var resultado = await _ventaService.EliminarAsync(id);
+            if (!resultado.Ok)
+                return BadRequest(new { mensaje = resultado.Error });
 
-        return NoContent();
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al eliminar la venta." });
+        }
     }
 }
