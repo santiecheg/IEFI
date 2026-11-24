@@ -72,4 +72,28 @@ IEFI Programación/   (raíz del repositorio)
 ### Prompt 3.3 — Uso de DTOs y manejo de excepciones (`try-catch`) en controladores
 > **Objetivo:** Adaptar los controladores para trabajar con los DTOs de negocio y capturar excepciones no controladas devolviendo estado `500`.
 >
-> "Actualizá `CajeroController`, `ProductoController` y `VentaController` para recibir y devolver los DTOs de `Verduleria.Business.DTOs` (eliminando los records locales del controlador de ventas)
+> "Actualizá `CajeroController`, `ProductoController` y `VentaController` para recibir y devolver los DTOs de `Verduleria.Business.DTOs` (eliminando los records locales del controlador de ventas) y envolvé cada acción en bloques `try-catch` que retornen `StatusCode(500, new { mensaje = \"...\" })` ante errores inesperados."
+
+### Prompt 3.4 — Compilación y publicación en GitHub
+> **Objetivo:** Verificar que toda la solución compile y sincronizar los cambios en la rama principal.
+>
+> "Proporcioná los comandos de PowerShell para compilar la solución completa (`dotnet build`), verificar el estado del repositorio (`git status`), realizar el commit y subir los cambios a `main` en GitHub."
+
+---
+
+## 4. Estructura del proyecto y frontend
+
+### Prompt 4.1 — Carpeta del proyecto y frontend que consume la API
+> **Objetivo:** Organizar el proyecto en una carpeta con Backend y Frontend, incorporar el backend del repositorio y desarrollar el frontend en HTML, CSS y JavaScript vainilla según la consigna (se adjuntó el PDF del Trabajo Práctico Integrador).
+>
+> "Quiero que crees una carpeta en el escritorio que se llame IF Programación. Dentro de esa carpeta tiene que haber otra carpeta llamada Backend, otra Frontend y un archivo Markdown donde podamos poner los prompts que utilizamos. Dentro de la carpeta Backend usá lo que está en el GitHub https://github.com/santiecheg/IEFI.git: descargá todo el repositorio, con todas las capas, en la carpeta Backend. En la carpeta Frontend creá todo el front que debe llevar esta página, algo sencillo como lo explica el PDF."
+
+**Resultado:**
+- Se creó la carpeta del proyecto con `Backend`, `Frontend` y este archivo de prompts.
+- El código del repositorio IEFI se incorporó en la carpeta `Backend`.
+- Se desarrolló el frontend a partir de las entidades, rutas y validaciones del backend:
+  - `index.html` con 4 secciones: Resumen, Ventas, Productos y Cajeros.
+  - CRUD de productos y cajeros con formulario, listado, edición y eliminación.
+  - Registro de ventas con vista previa del total y del stock restante, edición, eliminación y filtros Todas / Hoy / Semana (endpoints `api/venta/hoy` y `api/venta/semana`).
+  - Resumen con lo recaudado hoy y en la semana, productos con poco stock, cajeros activos y últimas ventas (`api/venta/ultimas`).
+  - Validaciones en los formularios iguales a las de los services, manejo de los errores que devuelve la API e indicador de conexión con el backend.
