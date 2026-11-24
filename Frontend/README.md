@@ -5,27 +5,11 @@ Hecho con **HTML, CSS y JavaScript vainilla** (sin frameworks), consume la Web A
 
 ## Cómo levantarlo
 
-### 1. Backend (API)
+El paso a paso completo (requisitos, base de datos, ejecución de la API y uso de cada pantalla) está en el [README principal](../README.md).
 
-1. Abrir `Backend/VerduleriaApi.sln` en Visual Studio.
-2. Revisar la cadena de conexión en `Verduleria.Api/appsettings.json` (por defecto `localhost\SQLEXPRESS`, base `VerduleriaDb`).
-3. Crear la base de datos aplicando la migración:
-   - Consola del Administrador de paquetes (proyecto predeterminado `Verduleria.Data`, proyecto de inicio `Verduleria.Api`):
-     ```
-     Update-Database
-     ```
-   - O desde una terminal en `Backend`:
-     ```
-     dotnet ef database update --project Verduleria.Data --startup-project Verduleria.Api
-     ```
-4. Ejecutar la API con el perfil **http**. Queda escuchando en `http://localhost:5129` (Swagger en `/swagger`).
+En resumen: con la API corriendo con el perfil **http** (`http://localhost:5129`), abrí `index.html` con doble clic o con **Live Server**. Arriba a la derecha tiene que aparecer **API conectada** en verde.
 
-### 2. Frontend
-
-Abrir `index.html` con doble clic, o con la extensión **Live Server** de VS Code.
-Arriba a la derecha aparece **"API conectada"** (verde) si el front llega al backend.
-
-> Si la API se ejecuta con el perfil **https**, cambiar la URL en `js/config.js` por `https://localhost:7036/api`.
+> Si la API se ejecuta con el perfil **https**, cambiá la URL en `js/config.js` por `https://localhost:7036/api`.
 
 ## Estructura
 

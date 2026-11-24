@@ -97,3 +97,15 @@ IEFI Programación/   (raíz del repositorio)
   - Registro de ventas con vista previa del total y del stock restante, edición, eliminación y filtros Todas / Hoy / Semana (endpoints `api/venta/hoy` y `api/venta/semana`).
   - Resumen con lo recaudado hoy y en la semana, productos con poco stock, cajeros activos y últimas ventas (`api/venta/ultimas`).
   - Validaciones en los formularios iguales a las de los services, manejo de los errores que devuelve la API e indicador de conexión con el backend.
+
+### Prompt 4.2 — README con el paso a paso para usar el sistema
+> **Objetivo:** Documentar en el `README.md` de la raíz cómo instalar, configurar y usar el sistema completo.
+>
+> "Mejorá el README con el paso a paso para poder usar el sistema."
+
+**Resultado:**
+- Requisitos (Visual Studio 2022, SDK de .NET 8, SQL Server Express, `dotnet-ef` y Git) y cómo verificar cada uno.
+- Pasos para clonar el repositorio, revisar la cadena de conexión, crear la base con `dotnet ef database update`, ejecutar la API con el perfil `http` y abrir el frontend.
+- Guía de uso de cada pantalla (Resumen, Productos, Cajeros y Ventas) con sus reglas de negocio.
+- Recorrido de prueba con los datos iniciales, tabla de problemas frecuentes y cómo reiniciar la base.
+- El `Frontend/README.md` remite al README principal para la puesta en marcha.
